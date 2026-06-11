@@ -1,0 +1,76 @@
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+left to right direction
+
+title AGD Pipeline for Mitigating Hallucinations in 3D Model Generation
+
+rectangle "User Input" as input_block {
+  component "Text Prompt\nor Single Image" as prompt
+}
+
+rectangle "Initial 3D Generation" as gen_block {
+  component "SDS-Based Text-to-3D Generator\n(Threestudio + 2D Diffusion Prior)" as sds
+  component "Initial 3D Representation\n(SDF / NeRF / Mesh)" as mesh0
+}
+
+rectangle "Multi-View Analysis" as analysis_block {
+  component "Multi-View Renderer" as renderer
+  component "Rendered Views\n(front / side / back / top)" as views
+  component "LMM Hallucination Detector\n(find Janus faces, duplicated parts,\nview inconsistency)" as lmm
+  component "Adversarial Geometric Critic\n(GNN + topological metrics)" as critic
+  component "Geometric Grounding Module\n(map errors to 3D regions and constraints)" as grounding
+}
+
+rectangle "Closed-Loop Refinement" as refine_block {
+  component "Spatial Energy Function\nE(x) = lambda * L_geo + (1 - lambda) * L_distill" as energy
+  component "Optimization Loop\nL_total = L_SDS + E(x)" as opt
+  component "Refined 3D Model" as mesh1
+}
+
+rectangle "Evaluation" as eval_block {
+  component "Quantitative Metrics\nsurface smoothness,\nmanifold quality,\nLaplacian variance,\nBetti numbers" as metrics
+  component "Qualitative Comparison\nvs DreamFusion / Magic3D /\nFantasia3D / Hallo3D" as compare
+  component "Benchmarks\nObjaverse, GSO" as bench
+}
+
+prompt --> sds : generate
+sds --> mesh0
+mesh0 --> renderer : render candidate model
+renderer --> views
+views --> lmm : visual inspection
+views --> critic : topology cues
+lmm --> grounding : error labels / regions
+critic --> grounding : anomaly scores
+grounding --> energy
+mesh0 --> opt : current geometry
+energy --> opt : grounded correction loss
+opt --> mesh1 : update geometry
+mesh1 --> renderer : re-render until consistent
+
+mesh1 --> metrics
+mesh1 --> compare
+bench --> metrics
+bench --> compare
+
+note right of lmm
+Addresses:
+- Janus problem
+- duplicated limbs or faces
+- cross-view inconsistency
+end note
+
+note right of grounding
+Key idea:
+replace text-only negative prompts
+with spatially grounded 3D constraints
+end note
+
+note bottom of opt
+Implementation stack:
+Python, PyTorch, Threestudio,
+Diffusers, local LLaVA
+end note
+
+@enduml

@@ -87,7 +87,7 @@ def main() -> None:
             loss = loss_fn(out, batch.y)
             loss.backward()
             optimizer.step()
-            total += loss.item()
+            total += float(loss)
         print(f"epoch {epoch + 1}/{args.epochs} loss={total / len(loader):.4f}")
 
     torch.save(model.state_dict(), args.output)

@@ -1,0 +1,260 @@
+﻿=== PAGE 1 ===
+Project Proposal
+BSc (Hons) in Artificial Intelligence
+Adversarial Geometric Distillation Based Mitigating Hallucinations in 3D
+Model Generation
+N D G S Dissasekara
+215519C
+Department of Computational Mathematics
+Faculty of Information Technology
+University of Moratuwa
+2026
+i
+
+=== PAGE 2 ===
+Table of Contents
+1 Introduction .................................................................................................................................... 1
+2 Objectives ....................................................................................................................................... 1
+3 Literature Review ........................................................................................................................... 2
+3.1 Foundations of Neural 3D Representations and Generative Priors ....................................... 2
+3.2 Defining 3D Hallucinations and the Janus Problem ............................................................. 2
+3.3 Evolution of Structural Fidelity and Disentanglement .......................................................... 2
+3.4 Mathematical Mitigation and Score-Space Debiasing .......................................................... 2
+3.5 The Multi-Modal Gap - Analyzing Hallo3D and its Limitations ......................................... 3
+3.6 Rationale for Proposed Research .......................................................................................... 3
+4 Problem Definition / Research Gap ................................................................................................ 3
+5 Proposed Research Outcome .......................................................................................................... 3
+5.1 System Overview .................................................................................................................. 3
+5.2 Methodology and Architecture ............................................................................................. 4
+5.3 Methodology and Architecture ............................................................................................. 4
+5.4 Process Flow ......................................................................................................................... 4
+5.5 Feasibility and Resource Capability...................................................................................... 4
+6 Resource Requirements .................................................................................................................. 4
+6.1 Hardware Resources ............................................................................................................. 5
+6.2 Software Resources ............................................................................................................... 5
+7 Summary ........................................................................................................................................ 5
+8 References ...................................................................................................................................... 5
+9 Appendix ΓÇô Plan of Action ............................................................................................................. 6
+ii
+
+=== PAGE 3 ===
+1 Introduction
+The field of 3D content generation has evolved from optimization-based reconstruction to
+zero-shot synthesis via Neural Radiance Fields (NeRF) [1] and Score Distillation Sampling
+(SDS) [2]. While subsequent architectural refinements in Magic3D [3] and Fantasia3D [4]
+have significantly improved visual resolution and surface extractability, these models remain
+hindered by a fundamental lack of 3D geometric awareness inherent in 2D diffusion priors.
+This deficiency leads to persistent "geometric hallucinations," most notably the Janus problem,
+where objects display redundant or inconsistent features [2], [5], [6] . Theoretical analysis
+identifies these artifacts as a manifestation of "mode collapse," where optimization settles into
+high-probability 2D frontal views [5]. The current state-of-the-art approach, Hallo3D [7],
+attempts to mitigate this by using Large Multi modal Models (LMMs) to detect structural errors
+and generate "enhanced negative prompts." However, a critical research gap remains - LMM
+driven frameworks suffer from secondary reasoning hallucinations, where the LMM
+misidentifies errors or fails to perceive subtle spatial inconsistencies. Furthermore, relying on
+a purely text-based feedback loop creates a "semantic bottleneck," as negative prompts lack
+the spatial precision required to guide 3D optimization effectively, often resulting in over-
+correction or new artifacts.
+The significance of addressing these multi layered hallucinations is vital for the professional
+scalability of AI driven asset creation in Virtual Reality (VR), Augmented Reality (AR), and
+gaming, where structural integrity is as critical as visual fidelity. Current frameworks fail
+because they cannot ground LMM reasoning into precise 3D spatial constraints.
+This research project introduces a closed loop geometric grounding framework designed to
+overcome the reasoning limitations and secondary hallucinations identified in Hallo3D [7].
+The proposed technology moves beyond simple textual prompts by integrating LMM detection
+with a direct, spatially aware geometric feedback mechanism. By translating multi-modal
+observations into explicit structural constraints, this research aims to eliminate both primary
+2D prior hallucinations and secondary LMM reasoning errors, providing a robust
+methodological solution for consistent and structurally sound 3D content generation within the
+AI literature.
+2 Objectives
+ΓÇó Critical review of the literature on geometric hallucinations in generative 3D models,
+analyzing how the evolution of these models led to specific topological errors and
+structural inconsistencies.
+ΓÇó In-depth study of adversarial neural networks and self-distillation technologies used
+for automated artifact detection and mesh refinement.
+ΓÇó Design and develop an Adversarial Geometric Distillation system that integrates an
+auxiliary AI critic to guide the correction of 3D geometric anomalies.
+ΓÇó Evaluate the proposed solution using quantitative geometric metrics (e.g., surface
+smoothness, manifold quality) and qualitative performance comparisons against
+baseline models.
+1
+
+=== PAGE 4 ===
+3 Literature Review
+3.1 Foundations of Neural 3D Representations and Generative Priors
+The paradigm of 3D content generation has evolved from optimization-based reconstruction
+to zero-shot generative synthesis. The technical foundation was established by Neural
+Radiance Fields (NeRF) [1], which utilized a multilayer perceptron (MLP) to represent scenes
+as continuous volumetric functions. While NeRF excelled at view synthesis, it required multi-
+view supervision. The leap to text-to-3D was facilitated by DreamFusion [2], which introduced
+Score Distillation Sampling (SDS). SDS utilizes a pretrained 2D diffusion model ≡¥£û to provide
+≡¥£Ö
+gradients for a 3D model ≡¥£â by minimizing the difference between added and predicted noise.
+Γêé≡¥æÑ
+Γêç ΓäÆ = ≡¥ö╝ [≡¥æñ(≡¥æí)(≡¥£û╠é (≡¥æÑ ;≡¥æª,≡¥æí)ΓêÆ≡¥£û) ]
+≡¥£â SDS ≡¥æí,≡¥£û ≡¥£Ö ≡¥æí Γêé≡¥£â
+Despite enabling high-fidelity synthesis, SDS-based methods frequently suffer from
+"geometric hallucinations" structural errors where 2D models lack the 3D awareness to
+maintain global consistency.
+3.2 Defining 3D Hallucinations and the Janus Problem
+In 3D generative literature, "hallucination" refers to the emergence of geometrically
+inconsistent or semantically redundant features that do not exist in the source prompt [8]. The
+most pervasive hallucination is the Janus Problem, characterized by the duplication of
+canonical features (e.g., multiple faces or sets of limbs) [2], [5], [6]. This occurs because 2D
+diffusion models are biased toward high-probability frontal views in their training data. As
+noted by Wang et al.[5], this is a manifestation of "mode collapse," where the optimization
+settles into a local minimum of a specific 2D viewpoint. Additionally, texture
+hallucinations often manifest as over-saturation or "color bleeding," a byproduct of the high
+guidance scales required for convergence in models like TextMesh [9] and Latent-NeRF [10].
+3.3 Evolution of Structural Fidelity and Disentanglement
+To improve geometric accuracy, researchers moved beyond simple volume
+density. Magic3D [3] utilized a coarse-to-fine strategy with hash grids to achieve higher
+resolution, while Fantasia3D [4] introduced a disentangled framework using Physically Based
+Rendering (PBR) and surface normals to refine geometry separately from appearance.
+Furthermore, recent breakthroughs in 3D Gaussian Splatting (3DGS) [11] have offered faster
+rendering speeds, yet these explicit representations remain vulnerable to the same 2D prior
+induced hallucinations. Variational Score Distillation (VSD), introduced in ProlificDreamer
+[12], attempted to solve consistency by modeling the 3D scene as a distribution rather than a
+single point, though it increased computational complexity significantly.
+3.4 Mathematical Mitigation and Score-Space Debiasing
+Early attempts to detect and mitigate these hallucinations focused on mathematical adjustments
+to the score space. Perp-Neg [6] proposed a perpendicular gradient sampling method, ensuring
+that negative prompts (e.g., "side view") do not interfere with the primary semantics of the
+frontal prompt. Similarly, Entropic Score Distillation (ESD) [5] introduced an entropy
+regularization term to the objective function -
+2
+
+=== PAGE 5 ===
+≡¥É╜ = ≡¥É╜ ΓêÆ≡¥£å≡¥ö╝[╬⌐(≡¥æí)≡¥É╗[≡¥æ₧≡¥£â(≡¥æÑ Γêú ≡¥æª)]]
+Ent MLE ≡¥æí ≡¥æí
+By maximizing entropy, ESD [5] encourages view diversity and reduces mode-seeking
+behavior. However, these methods are "geometry blind" they adjust the gradients without
+explicitly "understanding" if the generated structure is anatomically or physically correct.
+3.5 The Multi-Modal Gap - Analyzing Hallo3D and its Limitations
+The most recent shift involves the use of Large Multi-modal Models (LMMs) to simulate
+human-like reasoning. Hallo3D [7] introduced a "generation-detection-correction" paradigm,
+leveraging models like GPT-4V to identify structural hallucinations (e.g., "a bird with two
+beaks") and generating "enhanced negative prompts" to guide the diffusion process.
+However, critical analysis of [7] reveals a significant open challenge - Multi-modal Reasoning
+Hallucinations. Current LMMs are not natively 3D-aware and often provide inaccurate
+feedback or fail to perceive subtle geometric errors that cannot be easily verbalized.
+Furthermore, Hallo3D relies on a semantic bottleneck; it converts a visual error into text, which
+is then re-interpreted by a 2D diffusion model. This often leads to "over-correction" or the
+introduction of new artifacts that the LMM cannot track in real-time.
+3.6 Rationale for Proposed Research
+Existing research has moved from pure 2D priors [2] to mathematical debiasing [5], [6] and
+text-based multi-modal detection [7]. Yet, the field lacks a closed-loop system that grounds
+LMM reasoning into spatially aware geometric constraints. This proposed research aims to
+overcome the limitations of Hallo3D [7] by replacing the semantic bottleneck with a direct
+visual geometric feedback mechanism. By integrating LMM detection with explicit 3D
+structural priors, this project will address the "secondary hallucinations" found in multi-modal
+pipelines, positioning the contribution as a definitive solution for consistent, structurally sound
+3D content generation.
+4 Problem Definition / Research Gap
+To address the "semantic bottleneck" and reasoning hallucinations in current text-based 3D
+generation loops (e.g., Hallo3D [7], Magic3D [3]), this research proposes replacing imprecise
+"negative prompts" with direct geometric grounding. This feedback mechanism aims to
+provide the spatial precision required to eliminate structural inconsistencies and ensure
+topological integrity.
+5 Proposed Research Outcome
+5.1 System Overview
+This research proposes an Adversarial Geometric Distillation (AGD) framework as a
+refinement layer for text-to-3D generation. Unlike Hallo3D [7], which uses multi-modal
+models for detection via textual inconsistencies, AGD employs an auxiliary adversarial critic
+(GNN-based) to identify hallucinations through topological metrics (e.g., Laplacian variance
+for blobs, Betti numbers for genus), then grounds refinement via self-distillation, converting
+detections into spatial energy functions (e.g., ≡¥É╕(≡¥É▒) = ≡¥£å≡¥É┐+(1ΓêÆ≡¥£å)≡¥É╖, where ≡¥É┐is geometry loss
+and ≡¥É╖is distillation term) for structurally accurate optimization.
+3
+
+=== PAGE 6 ===
+5.2 Methodology and Architecture
+The AGD framework integrates an Auxiliary AI Critic into the 3D refinement loop to ensure
+topological integrity.
+Figure 1: System Architecture of Adversarial Geometric Distillation
+5.3 Methodology and Architecture
+ΓÇó Generative Pipeline - SDS-based synthesis of initial SDF-mesh from text/single-image
+input using 2D diffusion priors.
+ΓÇó Multi-View Renderer - Produces diverse 2D projections for spatial analysis.
+ΓÇó LMM Hallucination Detector - Large multimodal model scans renderings for structural
+issues (e.g., Janus faces, view inconsistencies).
+ΓÇó Adversarial Geometric Critic - Translates LMM feedback into a differentiable 3D
+energy function that localizes anomalies in spatial coordinates/regions.
+ΓÇó Grounded Refinement Loop - Iterative optimization adds geometric energy as
+adversarial loss to directly refine 3D parameters (SDF/mesh), enforcing manifold
+consistency without text re-prompting.
+5.4 Process Flow
+ΓÇó Input - A text prompt triggers the base 3D synthesis.
+ΓÇó Detection - The LMM detects hallucinations.
+ΓÇó Mapping - Critic maps detections to 3D energy function (localizes issues).
+ΓÇó Refinement - Optimizer refines geometry via combined SDS + geometric loss until
+artifacts vanishes.
+ΓÇó Output - Clean, consistent, photorealistic 3D asset.
+5.5 Feasibility and Resource Capability
+Built in Python with Threestudio + PyTorch. Leverages exist hallucination taxonomy. GPU-
+friendly (modest overhead from LMM + iterations). Completable in proposed timeline (see
+Appendix).
+6 Resource Requirements
+The successful implementation of the Adversarial Geometric Distillation (AGD) framework
+requires the following technical and non-technical resources:
+4
+
+=== PAGE 7 ===
+6.1 Hardware Resources
+High-performance workstation equipped with an NVIDIA RTX 3090/4090 or A100
+GPU (minimum 24GB VRAM) to support simultaneous latent diffusion processing and
+Large Multi-modal Model (LMM) inference.
+6.2 Software Resources
+Frameworks & Libraries: PyTorch for deep learning, Threestudio for 3D generation, and
+HuggingFace Diffusers for diffusion priorities.
+Models & APIs: Local deployment of LLaVA-v1.6 for hallucination detection.
+Datasets: Objaverse and Google Scanned Objects (GSO) for geometric benchmarking
+and evaluation.
+7 Summary
+This research introduces Adversarial Geometric Distillation (AGD) to mitigate hallucinations
+in text-to-3D generation, focusing on geometric artifacts like genus inconsistencies and blob
+problems caused by mode collapse in score distillation frameworks. By integrating an auxiliary
+adversarial critic (GNN-based for topology detection) with grounded self-distillation (teacher-
+student refinement using Laplacian metrics), AGD replaces view-biased 2D priors with
+explicit spatial constraints, yielding consistent, manifold-sound 3D meshes without relying on
+imprecise negative prompts or external multi-modal reasoning. The outcome is a novel,
+efficient pipeline that reduces Janus artifacts and enhances topological accuracy, as validated
+on datasets like Objaverse.
+8 References
+[1] B. Mildenhall, P. P. Srinivasan, M. Tancik, J. T. Barron, R. Ramamoorthi, and R. Ng,
+ΓÇ£NeRF: representing scenes as neural radiance fields for view synthesis,ΓÇ¥ Commun.
+ACM, vol. 65, no. 1, pp. 99ΓÇô106, Jan. 2022, doi: 10.1145/3503250.
+[2] B. Poole, A. Jain, J. T. Barron, and B. Mildenhall, ΓÇ£DreamFusion: Text-to-3D using 2D
+Diffusion,ΓÇ¥ Sep. 29, 2022, arXiv: arXiv:2209.14988. doi: 10.48550/arXiv.2209.14988.
+[3] C.-H. Lin et al., ΓÇ£Magic3D: High-Resolution Text-to-3D Content Creation,ΓÇ¥ Mar. 25,
+2023, arXiv: arXiv:2211.10440. doi: 10.48550/arXiv.2211.10440.
+[4] R. Chen, Y. Chen, N. Jiao, and K. Jia, ΓÇ£Fantasia3D: Disentangling Geometry and
+Appearance for High-quality Text-to-3D Content Creation,ΓÇ¥ Sep. 27, 2023, arXiv:
+arXiv:2303.13873. doi: 10.48550/arXiv.2303.13873.
+[5] P. Wang et al., ΓÇ£Taming Mode Collapse in Score Distillation for Text-to-3D Generation,ΓÇ¥
+Mar. 29, 2024, arXiv: arXiv:2401.00909. doi: 10.48550/arXiv.2401.00909.
+[6] M. Armandpour, A. Sadeghian, H. Zheng, A. Sadeghian, and M. Zhou, ΓÇ£Re-imagine the
+Negative Prompt Algorithm: Transform 2D Diffusion into 3D, alleviate Janus problem
+and Beyond,ΓÇ¥ Apr. 26, 2023, arXiv: arXiv:2304.04968. doi: 10.48550/arXiv.2304.04968.
+[7] H. Wang, J. Cao, J. Liu, X. Zhou, H. Huang, and R. He, ΓÇ£Hallo3D: Multi-Modal
+Hallucination Detection and Mitigation for Consistent 3D Content GenerationΓÇ¥.
+[8] Z. Bai et al., ΓÇ£Hallucination of Multimodal Large Language Models: A Survey,ΓÇ¥ Apr. 01,
+2025, arXiv: arXiv:2404.18930. doi: 10.48550/arXiv.2404.18930.
+[9] C. Tsalicoglou, F. Manhardt, A. Tonioni, M. Niemeyer, and F. Tombari, ΓÇ£TextMesh:
+Generation of Realistic 3D Meshes From Text Prompts,ΓÇ¥ Apr. 24, 2023, arXiv:
+arXiv:2304.12439. doi: 10.48550/arXiv.2304.12439.
+5
+
+=== PAGE 8 ===
+[10] G. Metzer, E. Richardson, O. Patashnik, R. Giryes, and D. Cohen-Or, ΓÇ£Latent-NeRF
+for Shape-Guided Generation of 3D Shapes and Textures,ΓÇ¥ Nov. 14, 2022, arXiv:
+arXiv:2211.07600. doi: 10.48550/arXiv.2211.07600.
+[11] T. Wu et al., ΓÇ£Recent advances in 3D Gaussian splatting,ΓÇ¥ Comput. Vis. Media, vol.
+10, no. 4, pp. 613ΓÇô642, Aug. 2024, doi: 10.1007/s41095-024-0436-y.
+[12] Z. Wang et al., ΓÇ£ProlificDreamer: High-Fidelity and Diverse Text-to-3D Generation
+with Variational Score Distillation,ΓÇ¥ Nov. 22, 2023, arXiv: arXiv:2305.16213. doi:
+10.48550/arXiv.2305.16213.
+9 Appendix ΓÇô Plan of Action
+6
+

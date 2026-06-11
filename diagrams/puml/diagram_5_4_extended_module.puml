@@ -1,0 +1,42 @@
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+left to right direction
+
+title Diagram 5.4 - Extended Module: Grounding and Refinement
+
+artifact "Extension Inputs\ncritic_scores [V]\nview_scores dict\nglobal_bias\noriginal_vertices" as IN_SIG
+
+package "Geometric Grounding" as GND {
+  component "Project multi-view evidence\ninto 3D vertex space" as G1
+  component "Build vertex weight map\nw_i in [w_min, w_max]" as G2
+
+  G1 --> G2
+}
+
+package "Refinement Optimizer" as OPT {
+  component "Geometric regularization\nL_geo" as O1
+  component "Anchor constraint\nD = sum ||v_i - v_i^(0)||^2" as O2
+  component "Weighted refinement update" as O3
+
+  O1 --> O3
+  O2 --> O3
+}
+
+package "Post-Refinement Evaluation" as EVAL {
+  component "Re-check hallucination score\nand geometry metrics" as E1
+  component "Export refined mesh\nand summary report" as E2
+
+  E1 --> E2
+}
+
+artifact "Extension Outputs\nrefined mesh\nS_hall_after\ngeometry report" as OUT_SIG
+
+IN_SIG --> G1
+IN_SIG --> O2 : anchor reference
+G2 --> O3 : w_i [V]
+O3 --> E1 : refined mesh
+E2 --> OUT_SIG
+
+@enduml

@@ -1,109 +1,203 @@
-# EXP_06 — AGD Mesh Refinement Prototype
+# EXP\_03 — Multi-View Renderer & Geometry Hallucination Detector
 
-Working prototype of Adversarial Geometric Distillation (AGD) focused on refining existing meshes. The pipeline iterates through render, detect, ground, and optimize steps for .obj/.ply/.stl assets.
+> **Research:** Adversarial Geometric Distillation (AGD) Framework  
+> Detects geometry hallucinations in 3D-generated assets and generates differentiable loss functions for feed-forward refinement.
 
-## Workflow (Current)
-1) Load mesh and compute baseline metrics
-2) Score anomalies with the critic (heuristic or GNN stub)
-3) Render multi-view images
-4) Detect issues (view-consistency, optional LLaVA)
-5) Ground view signals into per-vertex weights
-6) Optimize vertex positions for N iterations
-7) Save refined mesh and report metric deltas
+---
 
-## Setup
-```powershell
-# Create and activate a local venv (PowerShell)
-python -m venv .venv
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-& .\.venv\Scripts\Activate.ps1
+## Architecture Overview
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Optional: install LLaVA (for VLM view scoring)
-pip install -e LLaVA
+```
+Input Mesh (.ply / .obj / .tri)
+        │
+        ▼
+┌──────────────────────────────┐
+│   Multi-View Renderer        │  pyrender  → 24 RGB+Depth views
+│   (renderer/)                │  (8 azimuth × 3 elevation)
+└──────────────┬───────────────┘
+               │  [renders: color + depth]
+               ▼
+┌──────────────────────────────┐
+│  Geometry Hallucination      │  5 detectors → per-view scores
+│  Detector (detector/)        │  + HallucinationReport
+└──────────────┬───────────────┘
+               │  [report]
+               ▼
+┌──────────────────────────────┐
+│  Geometric Loss Computer     │  4 differentiable losses
+│  (loss/)                     │  → LossOutput + anomaly masks
+└──────────────┬───────────────┘
+               │  L_total = L_SDS + λ · L_geom
+               ▼
+┌──────────────────────────────┐
+│  Refinement Loop             │  Iterative render→detect→refine
+│  (refinement/)               │  Pluggable optimiser interface
+└──────────────────────────────┘
 ```
 
-```cmd
-:: Create and activate a local venv (CMD)
-python -m venv .venv
-.venv\Scripts\activate.bat
+---
 
-:: Install dependencies
-pip install -r requirements.txt
+## Project Structure
 
-:: Optional: install LLaVA (for VLM view scoring)
-pip install -e LLaVA
+```
+EXP_04/
+├── src/                    # Core AGD pipeline source code
+│   ├── agd_pipeline.py     # Main pipeline entry point
+│   ├── critic.py           # Heuristic & GNN critic
+│   ├── discriminator.py    # Hallucination discriminator
+│   ├── geometry_metrics.py # Geometry error metrics
+│   ├── grounding.py        # Spatial grounding
+│   ├── lmm_detector.py     # LLaVA-based VLM detector
+│   ├── optimizer.py        # Mesh refinement optimizer
+│   ├── renderer.py         # Multi-view software rasteriser
+│   ├── view_consistency.py # View consistency checks
+│   ├── gnn_train.py        # GNN training script
+│   └── refinement/         # Iterative refinement loop
+├── tests/                  # Tests & notebooks
+├── docs/                   # Thesis documentation
+│   ├── chapters/           # Markdown chapter content
+│   ├── docx/               # Word documents
+│   ├── pdf/                # PDF exports
+│   └── reports/            # Research reports & notes
+├── diagrams/               # All diagrams & figures
+│   ├── figures/            # PNG/SVG exported figures
+│   ├── drawio/             # Editable draw.io files
+│   └── puml/               # PlantUML source files
+├── scripts/                # Doc/visual generation scripts
+├── presentations/          # Presentation files
+├── data/                   # Loose 3D mesh data
+├── 3d_samples/             # 3D test sample assets (gitignored)
+├── agd_outputs/            # Pipeline output (gitignored)
+└── archive/                # Old renders & temp outputs
 ```
 
+---
+
+## Modules
+
+| Module | File | Description |
+|---|---|---|
+| **Renderer** | `src/renderer.py` | Software multi-view renderer (RGB/depth/normal/silhouette/edge) |
+| **Critic** | `src/critic.py` | Heuristic or optional GNN vertex anomaly scoring |
+| **Grounding** | `src/grounding.py` | Maps scores + view bias → per-vertex weights |
+| **Optimizer** | `src/optimizer.py` | Mesh refinement (Laplacian + anchored distillation) |
+| **Refinement** | `src/refinement/loop.py` | Iterative render→detect→ground→refine orchestration |
+| **Entry** | `src/agd_pipeline.py` | End-to-end pipeline CLI |
+
+---
+
+## Hallucination Detectors
+
+| # | Detector | Measures | Catches |
+|---|---|---|---|
+| 1 | **CLIP Semantic Consistency** | Cosine deviation between CLIP view embeddings | Janus faces, semantic drift |
+| 2 | **Depth Discontinuity** | Squared Laplacian of depth map | Floaters, disconnected patches |
+| 3 | **Normal Consistency** | Fraction of back-facing surface normals | Inside-out surfaces, flipped normals |
+| 4 | **Silhouette Asymmetry** | Area ratio of opposite-view silhouettes | Asymmetric Janus geometry |
+| 5 | **Edge Density Variance** | Canny edge density variance across views | Structural view inconsistency |
+
+---
+
+## Loss Functions
+
+| Loss | Formula | Drives |
+|---|---|---|
+| `L_semantic` | `mean((1 - CLIP_cosine_sim)²)` | Semantic view consistency |
+| `L_depth` | `mean(|∇²d|²)` — squared Laplacian | Surface smoothness, anti-floater |
+| `L_normal` | `fraction of inverted normals` | Manifold consistency |
+| `L_silhouette` | `mean(silhouette_asymmetry²)` | Symmetric geometry coverage |
+| **`L_total`** | `Σ wᵢ · Lᵢ / Σwᵢ` | Combined adversarial geometric loss |
+
+The total loss is designed to be added on top of SDS loss:
+```
+L_optimise = L_SDS + λ · L_total
+```
+
+---
+
+## Quick Start
+
+### 1. Install Dependencies
 ```bash
-# Create and activate a local venv (Git Bash / WSL)
-python -m venv .venv
-source .venv/Scripts/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Optional: install LLaVA (for VLM view scoring)
-pip install -e LLaVA
 ```
 
-## Run (Heuristic + View Consistency)
-```powershell
-python src/agd_pipeline.py --input-dir 3d_samples --output-dir src/agd_outputs --render-views
+### 2. Run the Pipeline
+```bash
+python src/agd_pipeline.py --input-dir 3d_samples --render-views
 ```
 
-## Run (With Local LLaVA)
-```powershell
-python src/agd_pipeline.py --input-dir 3d_samples --output-dir src/agd_outputs --render-views --use-vlm --llava-model-path liuhaotian/llava-v1.5-7b
+### 3. Run Refinement Loop
+```bash
+python src/refinement/cli.py --input-file 3d_samples/bunny.ply --render-views
 ```
 
-## Run (With GNN Critic)
-```powershell
-# Train the toy GNN critic from heuristic pseudo-labels
-python src/gnn_train.py --input-dir 3d_samples --output gnn_critic.pt --epochs 20
-
-# Use it in the pipeline
-python src/agd_pipeline.py --input-dir 3d_samples --output-dir src/agd_outputs --render-views --use-gnn --gnn-checkpoint gnn_critic.pt
-```
-
-## Smoke Test
-```powershell
+### 4. Run Smoke Test
+```bash
 python tests/smoke_test.py
 ```
 
-## Stage 7: Outer Refinement Loop
-```powershell
-# Single mesh, up to 3 refinement loops (stops early if converged)
-python src/agd_pipeline.py --input-file 3d_samples/bunny.ply --output-dir src/agd_outputs --render-views --refine-loops 3
+---
 
-# All meshes, 2 loops with cotangent Laplacian
-python src/agd_pipeline.py --input-dir 3d_samples --output-dir src/agd_outputs --render-views --refine-loops 2 --use-cot-laplacian
+## Output Structure
+
+```
+output/
+└── bunny/
+    ├── renders/              # detect-only renders
+    │   ├── view_000_az000_el-20_color.png
+    │   ├── view_000_az000_el-20_depth.npy
+    │   └── ...
+    └── iter_01/              # refinement iteration renders
+        ├── view_000_az000_el-20_color.png
+        └── ...
 ```
 
-## Stage 8: Ablation Study
-```powershell
-# Full ablation on all meshes (5 conditions)
-python src/ablation.py --input-dir 3d_samples --output-dir src/ablation_out
+---
 
-# Fast ablation on specific meshes only
-python src/ablation.py --input-dir 3d_samples --meshes bunny.ply janus.obj --output-dir src/ablation_out
+## Plugging In Your Own Optimiser
 
-# With GNN critic checkpoint included
-python src/ablation.py --input-dir 3d_samples --gnn-checkpoint gnn_critic.pt --output-dir src/ablation_out
+Implement the small optimizer interface in `refinement/optimizers.py`:
+
+```python
+import numpy as np
+import trimesh
+
+class MyOptimizer:
+    def reset(self, mesh: trimesh.Trimesh) -> None:
+        ...
+
+    def step(self, mesh: trimesh.Trimesh, weights: np.ndarray, outer_iter: int) -> trimesh.Trimesh:
+        # update mesh.vertices here (in-place is fine)
+        return mesh
 ```
 
-## Outputs
-- Refined meshes saved to src/agd_outputs/ (suffix *_agd.*)
-- Rendered views saved under src/agd_outputs/views/<mesh_name>/
-- Metrics printed before -> after (score, variance, fiedler)
+Then run the loop:
 
-## Notes
-- Supported mesh formats: .obj, .ply, .stl (trimesh in this environment does not support .tri).
-- LLaVA weights are large; first run will download and cache.
-- CPU inference is slow; CUDA is recommended.
-- The current optimizer smooths geometry; it does not change topology.
+```python
+from pathlib import Path
+from refinement.loop import RefinementLoopConfig, run_refinement_loop
+
+result = run_refinement_loop(
+    mesh,
+    Path("agd_outputs/refinement_loop"),
+    config=RefinementLoopConfig(outer_iters=5, render_views=True),
+    optimizer=MyOptimizer(),
+)
+refined = result.mesh
+```
+
+---
+
+## Dependencies
+
+### Core Rendering
+| Package | Version | Purpose |
+|---|---|---|
+| `pyrender` | 0.1.45 | OpenGL offscreen multi-view rendering |
+| `trimesh` | 4.4.1 | Mesh loading (.ply, .obj, .tri) & processing |
+| `pyglet` | 1.5.29 | pyrender backend |
+| `PyOpenGL` | 3.1.7 | OpenGL Python bindings |
 
 ### Numerical / Image
 | Package | Version | Purpose |

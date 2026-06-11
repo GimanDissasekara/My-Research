@@ -1,0 +1,29 @@
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+left to right direction
+
+title Diagram 5.5 - Simplified AGD Data Flow
+
+artifact "Input Mesh" as IN
+
+component "Preprocessing\nload, validate, normalize" as PRE
+component "Geometry Analysis\nDiscriminator + Critic" as GEO
+component "Multi-View Analysis\nRenderer + View Consistency\n+ optional LMM" as VIEW
+component "Grounding Module\ncombine analysis signals\n-> weights w_i" as GND
+component "Refinement Optimizer\nupdate mesh geometry" as OPT
+component "Evaluation and Export\nhallucination score\n+ geometry report" as EVAL
+
+artifact "Outputs\nRefined Mesh\n+ Quality Report" as OUT
+
+IN --> PRE
+PRE --> GEO
+PRE --> VIEW
+GEO --> GND
+VIEW --> GND
+GND --> OPT
+OPT --> EVAL
+EVAL --> OUT
+
+@enduml

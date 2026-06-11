@@ -11,15 +11,6 @@ data/**
 # Ignore LLaVA model/repo folder
 LLaVA/
 LLaVA/**
-docs/
-docs/**
-diagrams/
-diagrams/**
-scripts/
-scripts/**
-presentations/
-presentations/**
-
 
 # Ignore archive (old renders, temp outputs)
 archive/

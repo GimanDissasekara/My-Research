@@ -1,0 +1,32 @@
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam activity {
+  BackgroundColor white
+  BorderColor black
+  ArrowColor black
+}
+
+title Diagram 5.2 - Preprocessing Module Data Flow
+
+start
+:Input File\n(.obj / .ply / .stl);
+:trimesh.load()\nforce = "mesh";
+
+if (Scene object?) then (Yes)
+  :Concatenate all geometries;
+else (No)
+endif
+
+if (Valid mesh?\nV > 0 and V <= 500k) then (Yes)
+  :Center and normalize\nto unit bounding sphere;
+  :Extract nx.Graph\nvertex adjacency;
+  :Snapshot original vertices\noriginal_vertices = mesh.vertices.copy();
+  :Output to ML Engine;
+  stop
+else (No)
+  :Skip mesh and log warning;
+  stop
+endif
+
+@enduml

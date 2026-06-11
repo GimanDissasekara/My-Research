@@ -1,0 +1,57 @@
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+left to right direction
+
+title Diagram 5.1 - Top-Level AGD System Architecture
+
+package "Preprocessing Module" as PRE {
+  component "Load Mesh\n(.obj / .ply / .stl)" as PRE_LOAD
+  component "Validate and Normalize\n(center + unit sphere)" as PRE_NORM
+  component "Extract Adjacency Graph\n(NetworkX + edge_index)" as PRE_ADJ
+  component "Snapshot Original Vertices\nv_i^(0)" as PRE_SNAP
+
+  PRE_LOAD --> PRE_NORM
+  PRE_NORM --> PRE_ADJ
+  PRE_ADJ --> PRE_SNAP
+}
+
+package "ML Engine" as ML {
+  component "Discriminator\n(topology + spectral +\ngeometry quality)" as ML_DISC
+  component "Adversarial Critic\n(heuristic z-score or\nGNN GCNConv)" as ML_CRIT
+  component "Multi-View Renderer\n(Fibonacci-sphere,\nN views, 5 buffers)" as ML_REND
+  component "LMM Detector\n(LLaVA - per-view\nseverity JSON)" as ML_LMM
+  component "View Consistency\n(cosine similarity:\nfront-back, left-right,\ntop-bottom)" as ML_VC
+}
+
+package "Extended Module" as EXT {
+  component "Geometric Grounding\n(view scores + critic ->\nvertex weights w_i)" as EXT_GND
+  component "Refinement Optimizer\nv_i <- v_i - eta *\n(lambda * grad L_geo +\n(1-lambda) * grad D) * w_i" as EXT_OPT
+  component "Post-Analysis\n(discriminator +\n10-metric report)" as EXT_POST
+  component "Export Refined Mesh\n(*_agd.obj / .ply / .stl)" as EXT_EXPORT
+
+  EXT_GND --> EXT_OPT
+  EXT_OPT --> EXT_POST
+  EXT_POST --> EXT_EXPORT
+}
+
+artifact "Input Mesh" as INPUT
+artifact "Clean 3D Mesh\n+ Geometry Error Report" as OUTPUT
+
+INPUT --> PRE_LOAD
+PRE_SNAP --> ML_DISC
+PRE_SNAP --> ML_CRIT
+PRE_SNAP --> ML_REND
+
+ML_REND --> ML_LMM
+ML_REND --> ML_VC
+
+ML_DISC --> EXT_GND : S_hall
+ML_CRIT --> EXT_GND : critic_scores [V]
+ML_LMM --> EXT_GND : per-view severity + global_bias
+ML_VC --> EXT_GND : consistency severity
+
+EXT_EXPORT --> OUTPUT
+
+@enduml

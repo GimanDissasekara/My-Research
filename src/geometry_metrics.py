@@ -382,22 +382,22 @@ class GeometryErrorReport:
     def summary_str(self) -> str:
         n_views = int(self.scan_aggregate.get("n_views_evaluated", len(self.view_metrics)))
         lines = [
-            "  -- Geometry Error Metrics (before vs. after) --",
-            f"  Chamfer Distance    (v better): {self.cd:.6f}  [fwd {self.cd_forward:.6f}, bwd {self.cd_backward:.6f}]",
-            f"  Hausdorff Distance  (v better): {self.hd:.6f}  [HD95 {self.hd95:.6f}]",
-            f"  Normal Consistency  (^ better): {self.ncs:.4f}  [|cos| {self.ncs_abs:.4f}]",
-            f"  Angular Normal Err  (v better): mean={self.angular_mean_deg:.2f}deg  p95={self.angular_p95_deg:.2f}deg  max={self.angular_max_deg:.2f}deg",
-            f"  Surface Roughness   (v better): RMS={self.roughness_rms:.6f}",
-            f"  Curvature W1        (v better): {self.curvature_w1:.6f}",
+            "  ── Geometry Error Metrics (before vs. after) ──",
+            f"  Chamfer Distance    (↓ better): {self.cd:.6f}  [fwd {self.cd_forward:.6f}, bwd {self.cd_backward:.6f}]",
+            f"  Hausdorff Distance  (↓ better): {self.hd:.6f}  [HD95 {self.hd95:.6f}]",
+            f"  Normal Consistency  (↑ better): {self.ncs:.4f}  [|cos| {self.ncs_abs:.4f}]",
+            f"  Angular Normal Err  (↓ better): mean={self.angular_mean_deg:.2f}°  p95={self.angular_p95_deg:.2f}°  max={self.angular_max_deg:.2f}°",
+            f"  Surface Roughness   (↓ better): RMS={self.roughness_rms:.6f}",
+            f"  Curvature W1        (↓ better): {self.curvature_w1:.6f}",
             f"    curvature before={self.curvature_mean_before:.6f}  after={self.curvature_mean_after:.6f}",
         ]
         if self.view_metrics:
             lines += [
-                f"  -- Multi-view scan ({n_views} views) --",
-                f"  Mean Silhouette IoU (^ better): {self.mean_silhouette_iou:.4f}",
-                f"  Mean Depth RMSE     (v better): {self.mean_depth_rmse:.4f}",
-                f"  Mean SSIM           (^ better): {self.mean_ssim:.4f}",
-                f"  Mean Edge IoU       (^ better): {self.mean_edge_iou:.4f}",
+                f"  ── Multi-view scan ({n_views} views) ──",
+                f"  Mean Silhouette IoU (↑ better): {self.mean_silhouette_iou:.4f}",
+                f"  Mean Depth RMSE     (↓ better): {self.mean_depth_rmse:.4f}",
+                f"  Mean SSIM           (↑ better): {self.mean_ssim:.4f}",
+                f"  Mean Edge IoU       (↑ better): {self.mean_edge_iou:.4f}",
             ]
             if self.scan_aggregate:
                 lines.append("  Scan aggregate (worst-case views):")

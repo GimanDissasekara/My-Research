@@ -11,14 +11,6 @@ from typing import Optional
 import numpy as np
 import trimesh
 
-try:
-    import torch
-    import torch.nn as nn
-    from torch_geometric.nn import GCNConv
-    _TORCH_AVAILABLE = True
-except ImportError:
-    _TORCH_AVAILABLE = False
-
 
 @dataclass
 class CriticConfig:
@@ -53,9 +45,12 @@ class HeuristicCritic:
 
 class GnnCritic:
     def __init__(self, checkpoint: Optional[str] = None, seed: int = 42) -> None:
-        if not _TORCH_AVAILABLE:
-            raise ImportError("torch and torch_geometric are required for GnnCritic")
+        import torch
+        from torch_geometric.nn import GCNConv
+
         torch.manual_seed(seed)
+        self.torch = torch
+        self.GCNConv = GCNConv
         self.model = _SimpleGCN()
         if checkpoint:
             state = torch.load(checkpoint, map_location="cpu")
@@ -63,6 +58,7 @@ class GnnCritic:
         self.model.eval()
 
     def score(self, mesh: trimesh.Trimesh) -> np.ndarray:
+        torch = self.torch
         vertices = mesh.vertices
         num_vertices = vertices.shape[0]
         if num_vertices == 0:
@@ -88,15 +84,20 @@ class GnnCritic:
         return np.clip(score, 0.0, 1.0)
 
 
-class _SimpleGCN(nn.Module):
-    """Two-layer GCN that maps per-vertex features to a scalar anomaly logit."""
-
+class _SimpleGCN:
     def __init__(self) -> None:
-        super().__init__()
+        import torch
+        from torch_geometric.nn import GCNConv
+
         self.conv1 = GCNConv(2, 16)
         self.conv2 = GCNConv(16, 1)
+        self.torch = torch
 
-    def forward(self, x, edge_index):
+    def eval(self) -> None:
+        return None
+
+    def __call__(self, x, edge_index):
+        torch = self.torch
         x = self.conv1(x, edge_index)
         x = torch.relu(x)
         x = self.conv2(x, edge_index)

@@ -1,0 +1,52 @@
+@startuml
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+top to bottom direction
+
+title Diagram 5.3 - ML Engine Internal Architecture
+
+artifact "Normalized Mesh\n(trimesh.Trimesh)" as MESH
+artifact "Grounding Module Input" as GND
+
+package "Discriminator - discriminator.py" as DISC {
+  component "compute_topology()\nV, E, F -> chi, genus, beta_0" as D1
+  component "compute_laplacian_metrics()\nL = D - A -> Var(lambda),\nFiedler lambda_2,\ncotangent variance" as D2
+  component "compute_geometry_quality()\naspect ratio,\ndegenerate faces,\nnon-manifold edges" as D3
+  component "hallucination_score()\n0.20*P_cc + 0.30*P_genus +\n0.15*P_var + 0.10*P_fiedler +\n0.10*P_cot + 0.15*P_quality" as D4
+
+  D1 --> D4
+  D2 --> D4
+  D3 --> D4
+}
+
+package "Adversarial Critic - critic.py" as CRIT {
+  component "Heuristic Critic\ndegree z-score + edge-length z-score\n-> sigmoid blend per vertex" as C1
+  component "GNN Critic (optional)\n2-layer GCNConv\ninput: [deg, mean_edge_len]\noutput: anomaly score [V]" as C2
+
+  C1 ..> C2 : --use-gnn
+}
+
+package "Renderer + Detectors" as REND {
+  component "renderer.py\nFibonacci-sphere N views\n5 buffers per view:\nRGB, depth, normal,\nsilhouette, edge_map" as R1
+  component "view_consistency.py\n32x32 grayscale cosine similarity\nfront-back, left-right,\ntop-bottom" as R2
+  component "lmm_detector.py\nLLaVA v1.5 / v1.6 local\nJSON: {severity, notes}" as R3
+
+  R1 --> R2
+  R1 --> R3 : --use-vlm
+}
+
+MESH --> D1
+MESH --> D2
+MESH --> D3
+MESH --> C1
+MESH --> C2
+MESH --> R1
+
+D4 --> GND : S_hall
+C1 --> GND : critic_scores [V]
+C2 --> GND : critic_scores [V]
+R2 --> GND : view_scores dict
+R3 --> GND : view_scores + global_bias
+
+@enduml
