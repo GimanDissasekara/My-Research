@@ -1,0 +1,32 @@
+# Ignore generated/output folders
+agd_outputs/
+agd_outputs/**
+
+# Ignore 3D sample assets (large binary files)
+3d_samples/
+3d_samples/**
+data/
+data/**
+
+# Ignore LLaVA model/repo folder
+LLaVA/
+LLaVA/**
+docs/
+docs/**
+diagrams/
+diagrams/**
+scripts/
+scripts/**
+presentations/
+presentations/**
+
+
+# Ignore archive (old renders, temp outputs)
+archive/
+archive/**
+
+# Optional Python ignores
+.venv/
+__pycache__/
+*.pyc
+.env
